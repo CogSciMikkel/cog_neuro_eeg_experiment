@@ -1,22 +1,26 @@
 # --- EEG Experiment for Cog Neuro ---
-
-
-
-# --- REMEMBER TO CHECK OUT THE CHECKLIST ---
-# remember triggers
-
-
-
-# loading modules
-from psychopy import gui, core, visual, event
+from psychopy import core, visual, event
 from psychopy.hardware import keyboard
 import pandas as pd
 import random
 from datetime import datetime
 import os
+# import triggers
 
 # define window
 win = visual.Window(color = "black", fullscr = True)
+
+# suggested trigger codes
+WORD_BLOCK = 10
+FACE_BLOCK = 11
+
+WORD_CONGRUENT = 20
+WORD_INCONGRUENT = 21
+FACE_CONGRUENT = 22
+FACE_INCONGRUENT = 23
+
+RESPONSE_CORRECT = 30
+RESPONSE_INCORRECT = 31
 
 # initialize text stim
 emotions = ["happy", "sad"]
@@ -62,28 +66,41 @@ all_images = (
 )
 
 # stimuli
-image_stim = visual.ImageStim(win, size=(.8, 1.3), pos=(0, 0))
-text_stim = visual.TextStim(win, height=.3, color="white", pos=(0, 0), ori = 45, anchorHoriz='center', anchorVert='center', alignText='center')
+image_stim = visual.ImageStim(
+    win, 
+    size=(.8, 1.3), 
+    pos=(0, 0)
+    )
+
+text_stim = visual.TextStim(
+    win, 
+    height=.3, 
+    color="white", 
+    pos=(0, 0), 
+    ori = 45, 
+    anchorHoriz='center', 
+    anchorVert='center', 
+    alignText='center'
+    )
 
 # RT
 rt_clock = core.Clock()
 
 # trials
-n_trials = 4 # len(all_images) -- tbd
-n_congruent = n_trials // 2
-n_incongruent = n_trials // 2
+reps = 10  # must be even for balance
 
 trial_list = []
 
-for _ in range(n_congruent):
-    img_file, emotion_image = random.choice(all_images)
-    emotion_text = emotion_image
-    trial_list.append((img_file, emotion_image, emotion_text, True))
+for img_file, emotion_image in all_images:
+    for i in range(reps):
+        if i % 2 == 0:
+            emotion_text = emotion_image
+            stim_congruence = True
+        else:
+            emotion_text = "sad" if emotion_image == "happy" else "happy"
+            stim_congruence = False
 
-for _ in range(n_incongruent):
-    img_file, emotion_image = random.choice(all_images)
-    emotion_text = "sad" if emotion_image == "happy" else "happy"
-    trial_list.append((img_file, emotion_image, emotion_text, False))
+        trial_list.append((img_file, emotion_image, emotion_text, stim_congruence))
 
 random.shuffle(trial_list)
 
@@ -92,10 +109,30 @@ trials = []
 
 participant_id = random.randint(1000, 9999)
 
+pullTriggerDown = False
+
 for condition, instruction_stim in conditions:
     instruction_stim.draw()
     win.flip()
     event.waitKeys(keyList=["s","h"])
+    
+    # --- TRIGGER? ---
+#    if condition == "word":
+#        block_trigger = WORD_BLOCK
+#    else:
+#        block_trigger = FACE_BLOCK
+#
+#    fixation.draw()
+#    win.callOnFlip(setParallelData, block_trigger)
+#    pullTriggerDown = True
+#    win.flip()
+
+#    if pullTriggerDown:
+#        fixation.draw()
+#        win.callOnFlip(setParallelData, 0)
+#        pullTriggerDown = False
+#        win.flip()
+    # --- ---
     
     for img_file, emotion_image, emotion_text, stim_congruence in trial_list:
         # show fixation cross for 400 ms
@@ -107,17 +144,23 @@ for condition, instruction_stim in conditions:
         image_stim.image = img_file
         text_stim.text = emotion_text
 
-        # show stim
+        # prepare stim
         image_stim.draw()
         text_stim.draw()
 
-        # start timer
+        # start timer and trigger
         win.callOnFlip(rt_clock.reset)
+        
+        # --- TRIGGER ---
+        
+        # flip window
         win.flip()
 
         # initialize keys
         response, rt = event.waitKeys(keyList=["s", "h"], timeStamped=rt_clock)[0]
-
+        
+        # ___ TRIGGER ---
+        
         # evaluate response
         response_label = "sad" if response == "s" else "happy"
         if condition == "face":
