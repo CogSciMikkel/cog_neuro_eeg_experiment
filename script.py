@@ -7,6 +7,9 @@ from datetime import datetime
 import os
 #import triggers # UNCOMMENT AFTER TRIGGERS INSERTED
 
+if not os.path.exists("logfiles"):
+    os.makedirs("logfiles")
+
 def check_exit():
     if event.getKeys(keyList=["escape"]):
         win.close()
