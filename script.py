@@ -1,26 +1,36 @@
-# --- EEG Experiment for Cog Neuro ---
+# --- EEG Experiment for Cog Neuro 2026 ---
 from psychopy import core, visual, event
 from psychopy.hardware import keyboard
 import pandas as pd
 import random
 from datetime import datetime
 import os
-# import triggers
+#import triggers # UNCOMMENT AFTER TRIGGERS INSERTED
+
+def check_exit():
+    if event.getKeys(keyList=["escape"]):
+        win.close()
+        core.quit()
 
 # define window
 win = visual.Window(color = "black", fullscr = True)
 
-# suggested trigger codes
-WORD_BLOCK = 10
-FACE_BLOCK = 11
+# trigger codes
+## response trigger
+RESPONSE = 1
 
-WORD_CONGRUENT = 20
-WORD_INCONGRUENT = 21
-FACE_CONGRUENT = 22
-FACE_INCONGRUENT = 23
+## condition triggers
+WORD_CONGRUENT = 10
+WORD_INCONGRUENT = 11
 
-RESPONSE_CORRECT = 30
-RESPONSE_INCORRECT = 31
+FACE_CONGRUENT = 20
+FACE_INCONGRUENT = 21
+
+def get_cond_trigger(condition, congruency):
+    if condition == "word":
+        return WORD_CONGRUENT if congruency else WORD_INCONGRUENT
+    elif condition == "face":
+        return FACE_CONGRUENT if congruency else FACE_INCONGRUENT        
 
 # initialize text stim
 emotions = ["happy", "sad"]
@@ -28,7 +38,7 @@ emotions = ["happy", "sad"]
 # initialize condition instructions
 focus_word_stim = visual.TextStim(
     win,
-    text="Focus on the WORD in the next trials.\n\nPress s or h to begin.",
+    text="You may take a break before proceeding.\n\nFocus on the WORD in the next trials.\n\nPress s or h to begin.",
     color="white",
     height=0.08,
     wrapWidth=1.4
@@ -36,7 +46,7 @@ focus_word_stim = visual.TextStim(
 
 focus_face_stim = visual.TextStim(
     win,
-    text="Focus on the FACE in the next trials.\n\nPress s or h to begin.",
+    text="You may take a break before proceeding.\n\nFocus on the FACE in the next trials.\n\nPress s or h to begin.",
     color="white",
     height=0.08,
     wrapWidth=1.4
@@ -85,9 +95,10 @@ text_stim = visual.TextStim(
 
 # RT
 rt_clock = core.Clock()
+kb = keyboard.Keyboard()
 
 # trials
-reps = 10  # must be even for balance
+reps = 12  # MUST BE EVEN OR CODE WILL BREAK YA DUMMY
 
 trial_list = []
 
@@ -100,44 +111,60 @@ for img_file, emotion_image in all_images:
             emotion_text = "sad" if emotion_image == "happy" else "happy"
             stim_congruence = False
 
-        trial_list.append((img_file, emotion_image, emotion_text, stim_congruence))
+        trial_list.append((
+            img_file, 
+            emotion_image, 
+            emotion_text, 
+            stim_congruence))
 
 random.shuffle(trial_list)
 
-# experimental loop
+# Welcome page
+intro = visual.TextStim(
+    win,
+    text="""
+    In this experiment, you will see faces with a word written across them. 
+    Sometimes the emotions of the word and the facial expressions will match, and sometimes they won't.
+    
+    Your task is to respond to either the word or the face - you will be told which one to focus on before each block.
+    
+    Press s if the emotion is sad, and h if the emotion is happy. Try to respond as quickly and accurately as possible.
+    
+    If you wish to exit, you can press escape at any time. But plz don't.
+    
+    Press any key to begin.
+    """,
+    color="white",
+    height=0.08,
+    wrapWidth=1.4
+)
+intro.draw()
+win.flip()
+check_exit()
+event.waitKeys()
+
+# experimental loop setup
 trials = []
 
 participant_id = random.randint(1000, 9999)
 
 pullTriggerDown = False
 
+# trial count
+trial = 0
+
+# ACTUAL EFFIN' LOOP LET'S GOOOOO
 for condition, instruction_stim in conditions:
     instruction_stim.draw()
     win.flip()
+    check_exit()
     event.waitKeys(keyList=["s","h"])
-    
-    # --- TRIGGER? ---
-#    if condition == "word":
-#        block_trigger = WORD_BLOCK
-#    else:
-#        block_trigger = FACE_BLOCK
-#
-#    fixation.draw()
-#    win.callOnFlip(setParallelData, block_trigger)
-#    pullTriggerDown = True
-#    win.flip()
-
-#    if pullTriggerDown:
-#        fixation.draw()
-#        win.callOnFlip(setParallelData, 0)
-#        pullTriggerDown = False
-#        win.flip()
-    # --- ---
-    
+        
     for img_file, emotion_image, emotion_text, stim_congruence in trial_list:
         # show fixation cross for 400 ms
         fixation.draw()
         win.flip()
+        check_exit()
         core.wait(.4)
 
         # initialize stim
@@ -150,16 +177,30 @@ for condition, instruction_stim in conditions:
 
         # start timer and trigger
         win.callOnFlip(rt_clock.reset)
+        win.callOnFlip(kb.clock.reset)
+        win.callOnFlip(kb.clearEvents)
         
-        # --- TRIGGER ---
+        # --- cond_trigger ---
+#        if pullTriggerDown:
+#            win.callOnFlip(setParallelData, 0)
+#            pullTriggerDown = False
+#
+#        cond_trigger = get_cond_trigger(condition, stim_congruence)
+#        win.callOnFlip(setParallelData, cond_trigger)
+#        pullTriggerDown = True
+        # --------------------
         
         # flip window
         win.flip()
-
-        # initialize keys
-        response, rt = event.waitKeys(keyList=["s", "h"], timeStamped=rt_clock)[0]
+        check_exit()
         
-        # ___ TRIGGER ---
+        # initialize keys
+        keys = kb.waitKeys(keyList=["s", "h"])
+        response, rt = keys[0].name, keys[0].rt
+
+#        setParallelData(RESPONSE)
+#        core.wait(0.005)
+#        setParallelData(0)
         
         # evaluate response
         response_label = "sad" if response == "s" else "happy"
@@ -171,6 +212,7 @@ for condition, instruction_stim in conditions:
         # log data
         trials.append({
             "participant_id": participant_id,
+            "trial": trial,
             "condition": condition,
             "image": img_file,
             "emotion_image": emotion_image,
@@ -180,6 +222,7 @@ for condition, instruction_stim in conditions:
             "correct_response": correct_response,
             "rt": rt
         })
+        trial += 1
 
 # get datetime for unique logfile name
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -187,7 +230,18 @@ timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 # create logfile path and name
 logfile_name = f"logfiles/logfile_{timestamp}.csv"
 
-logfile = pd.DataFrame(trials, columns = ["participant_id", "condition", "image", "emotion_image", "emotion_text", "stim_congruence", "response", "correct_response", "rt"])
+logfile = pd.DataFrame(trials, columns = [
+    "participant_id",
+    "trial",
+    "condition", 
+    "image", 
+    "emotion_image", 
+    "emotion_text", 
+    "stim_congruence", 
+    "response", 
+    "correct_response", 
+    "rt"])
+
 logfile.to_csv(logfile_name, index = False)
 
 win.close()
