@@ -5,7 +5,7 @@ import pandas as pd
 import random
 from datetime import datetime
 import os
-import triggers # UNCOMMENT AFTER TRIGGERS INSERTED
+from triggers import setParallelData
 
 if not os.path.exists("logfiles"):
     os.makedirs("logfiles")
@@ -202,11 +202,7 @@ for condition, instruction_stim in conditions:
         keys = kb.waitKeys(keyList=["s", "h"])
         response, rt = keys[0].name, keys[0].rt
 
-#        setParallelData(RESPONSE)
-#        core.wait(0.005)
-#        setParallelData(0)
-        
-        # evaluate response
+        # evaluate response + set trigger
         response_label = "sad" if response == "s" else "happy"
         if condition == "face":
             correct_response = (response_label == emotion_image)
