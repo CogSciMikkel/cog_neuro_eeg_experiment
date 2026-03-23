@@ -5,7 +5,7 @@ import pandas as pd
 import random
 from datetime import datetime
 import os
-#import triggers # UNCOMMENT AFTER TRIGGERS INSERTED
+import triggers # UNCOMMENT AFTER TRIGGERS INSERTED
 
 if not os.path.exists("logfiles"):
     os.makedirs("logfiles")
@@ -20,14 +20,15 @@ win = visual.Window(color = "black", fullscr = True)
 
 # trigger codes
 ## response trigger
-RESPONSE = 1
+RESPONSE_CORRECT = 10
+RESPONSE_INCORRECT = 11
 
 ## condition triggers
-WORD_CONGRUENT = 10
-WORD_INCONGRUENT = 11
+WORD_CONGRUENT = 20
+WORD_INCONGRUENT = 21
 
-FACE_CONGRUENT = 20
-FACE_INCONGRUENT = 21
+FACE_CONGRUENT = 30
+FACE_INCONGRUENT = 31
 
 def get_cond_trigger(condition, congruency):
     if condition == "word":
@@ -184,13 +185,13 @@ for condition, instruction_stim in conditions:
         win.callOnFlip(kb.clearEvents)
         
         # --- cond_trigger ---
-#        if pullTriggerDown:
-#            win.callOnFlip(setParallelData, 0)
-#            pullTriggerDown = False
-#
-#        cond_trigger = get_cond_trigger(condition, stim_congruence)
-#        win.callOnFlip(setParallelData, cond_trigger)
-#        pullTriggerDown = True
+        if pullTriggerDown:
+            win.callOnFlip(setParallelData, 0)
+            pullTriggerDown = False
+
+        cond_trigger = get_cond_trigger(condition, stim_congruence)
+        win.callOnFlip(setParallelData, cond_trigger)
+        pullTriggerDown = True
         # --------------------
         
         # flip window
@@ -209,8 +210,14 @@ for condition, instruction_stim in conditions:
         response_label = "sad" if response == "s" else "happy"
         if condition == "face":
             correct_response = (response_label == emotion_image)
+            setParallelData(RESPONSE_CORRECT) if correct_response else setParallelData(RESPONSE_INCORRECT)
+            core.wait(0.005)
+            setParallelData(0)
         else:
             correct_response = (response_label == emotion_text)
+            setParallelData(RESPONSE_CORRECT) if correct_response else setParallelData(RESPONSE_INCORRECT)
+            core.wait(0.005)
+            setParallelData(0)
 
         # log data
         trials.append({
